@@ -1,6 +1,6 @@
 <?php
 /*
-	Plugin Name: FedEx WooCommerce Shipping with Print Label - DO NOT UPGRADE
+	Plugin Name: FedEx WooCommerce Shipping with Print Label
 	Plugin URI: https://www.pluginhive.com/product/woocommerce-fedex-shipping-plugin-with-print-label/
 	Description: Obtain real time shipping rates and Print shipping labels via FedEx Shipping API.
 	Version: 4.1.7
