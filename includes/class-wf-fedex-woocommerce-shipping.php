@@ -122,108 +122,96 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		$this->init_settings();
 
 		$this->soap_method = $this->is_soap_available() ? 'soap' : 'nusoap';
-		//echo $this->soap_method.'<br/>';
 		if( $this->soap_method == 'nusoap' && !class_exists('nusoap_client') ){
 			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/nusoap/lib/nusoap.php';
 		}
 
 		// Define user set variables
 		$this->enabled				= isset( $this->settings['enabled'] ) ? $this->settings['enabled'] : $this->enabled;
-		//echo $this->enabled.'<br/>';
 		$this->title				= $this->get_option( 'title', $this->method_title );
-		//echo $this->title.'<br/>';
 		$this->availability			= isset( $this->settings['availability'] ) ? $this->settings['availability'] : 'all';
-		//echo $this->availability.'<br/>';
 		$this->countries			= isset( $this->settings['countries'] ) ? $this->settings['countries'] : array();
-		//echo $this->countries.'<br/>';
-		//echo $this->origin.'<br/>';
-		if( class_exists( 'WC_Aelia_CurrencySwitcher' ) ){
-			$this->get_general_settings();
-		} else {
-			$this->origin				= apply_filters( 'woocommerce_fedex_origin_postal_code', str_replace( ' ', '', strtoupper( $this->get_option( 'origin' ) ) ) );
-
-			$this->account_number			= $this->get_option( 'account_number' );
-			$this->meter_number			= $this->get_option( 'meter_number' );
-			$this->smartpost_hub			= $this->get_option( 'smartpost_hub' );
-			$this->indicia				= $this->get_option( 'indicia' );
+		$this->origin				= apply_filters( 'woocommerce_fedex_origin_postal_code', str_replace( ' ', '', strtoupper( $this->get_option( 'origin' ) ) ) );
+		$this->account_number			= $this->get_option( 'account_number' );
+		$this->meter_number			= $this->get_option( 'meter_number' );
+		$this->smartpost_hub			= $this->get_option( 'smartpost_hub' );
+		$this->indicia				= $this->get_option( 'indicia' );
 		
-			$this->ship_from_address 		= isset($this->settings['ship_from_address'])? $this->settings['ship_from_address'] : 'origin_address';
+		$this->ship_from_address 		= isset($this->settings['ship_from_address'])? $this->settings['ship_from_address'] : 'origin_address';
 		
-			$this->api_key				= $this->get_option( 'api_key' );
-			$this->api_pass				= $this->get_option( 'api_pass' );
-			$this->production			= ( $bool = $this->get_option( 'production' ) ) && $bool == 'yes' ? true : false;
-			$this->debug				= ( $bool = $this->get_option( 'debug' ) ) && $bool == 'yes' ? true : false;
-			$this->delivery_time			= ( $bool = $this->get_option( 'delivery_time' ) ) && $bool == 'yes' ? true : false;
-			if( $this->delivery_time && empty(self::$wp_date_format) ) {
-				self::$wp_date_format = get_option('date_format');
-			}
-			$this->insure_contents			= ( $bool = $this->get_option( 'insure_contents' ) ) && $bool == 'yes' ? true : false;
-			$this->request_type			= $this->get_option( 'request_type', 'LIST' );
-
-			$this->packing_method			= $this->get_option( 'packing_method', 'per_item' );
-			$this->conversion_rate			= ! empty( $this->settings['conversion_rate'] ) ? $this->settings['conversion_rate'] : '';
-			$this->min_shipping_cost	= ! empty($this->settings['min_shipping_cost']) ? $this->settings['min_shipping_cost'] : null;
-			$this->boxes				= $this->get_option( 'boxes', array( ));
-			$this->custom_services			= $this->get_option( 'services', array( ));
-			$this->offer_rates			= $this->get_option( 'offer_rates', 'all' );
-			$this->convert_currency_to_base		= $this->get_option( 'convert_currency');		
-			$this->residential			= ( $bool = $this->get_option( 'residential' ) ) && $bool == 'yes' ? true : false;
-			$this->freight_enabled			= ( $bool = $this->get_option( 'freight_enabled' ) ) && $bool == 'yes' ? true : false;
-			$this->fedex_one_rate			= ( $bool = $this->get_option( 'fedex_one_rate' ) ) && $bool == 'yes' ? true : false;
-			$this->fedex_one_rate_package_ids = array(
-				'FEDEX_SMALL_BOX',
-				'FEDEX_MEDIUM_BOX',
-				'FEDEX_LARGE_BOX',
-				'FEDEX_EXTRA_LARGE_BOX',
-				'FEDEX_PAK',
-				'FEDEX_ENVELOPE',
-			);
-		
-			$this->delivery_time_details		= '';
-			$this->box_max_weight			= $this->get_option( 'box_max_weight' );
-			$this->weight_pack_process		= $this->get_option( 'weight_pack_process' );
-		
-			if($this->get_option( 'dimension_weight_unit' ) == 'LBS_IN'){
-				$this->dimension_unit		= 'in';
-				$this->weight_unit		= 'lbs';
-				$this->labelapi_dimension_unit	= 'IN';
-				$this->labelapi_weight_unit 	= 'LB';
-			}else{
-				$this->dimension_unit		= 'cm';
-				$this->weight_unit		= 'kg';
-				$this->labelapi_dimension_unit	= 'CM';
-				$this->labelapi_weight_unit 	= 'KG';
-				$this->default_boxes		= include( 'data-wf-box-sizes-cm.php' );
-			}
-			if ( $this->freight_enabled ) {
-				$this->freight_class			= $this->get_option( 'freight_class' );
-				$this->freight_number			= $this->get_option( 'freight_number', $this->account_number );
-				$this->freight_bill_street		= $this->get_option( 'freight_bill_street' );
-				$this->freight_billing_street_2		= $this->get_option( 'billing_street_2' );
-				$this->freight_billing_city		= $this->get_option( 'freight_billing_city' );
-				$this->freight_billing_state		= $this->get_option( 'freight_billing_state' );
-				$this->freight_billing_postcode		= $this->get_option( 'billing_postcode' );
-				$this->freight_billing_country		= $this->get_option( 'billing_country' );
-				$this->frt_shipper_street		= $this->get_option( 'frt_shipper_street' );
-				$this->freight_shipper_street_2		= $this->get_option( 'shipper_street_2' );
-				$this->freight_shipper_city		= $this->get_option( 'freight_shipper_city' );
-				$this->freight_shipper_residential	= ( $bool = $this->get_option( 'shipper_residential' ) ) && $bool == 'yes' ? true : false;
-				$this->freight_class			= str_replace( array( 'CLASS_', '.' ), array( '', '_' ), $this->freight_class );
-			}
-			$this->is_dry_ice_enabled 	= isset( $this->settings['dry_ice_enabled'] ) && $this->settings['dry_ice_enabled'] =='yes' ? true : false;
-		
-			$this->signature_option 	= isset ( $this->settings['signature_option'] ) ? $this->settings['signature_option'] : '';
-			$this->min_amount	  		= isset( $this->settings['min_amount'] ) ? $this->settings['min_amount'] : 0;
-			$this->customs_duties_payer	= isset ( $this->settings['customs_duties_payer'] ) ? $this->settings['customs_duties_payer'] : '';
-			$this->enable_speciality_box	= ( $bool = $this->get_option( 'enable_speciality_box' ) ) && $bool == 'yes' ? true : false;
-			$this->ship_time_adjustment = isset( $this->settings['ship_time_adjustment']) ? $this->settings['ship_time_adjustment'] : 1;
-			$this->wc_store_currency		= get_woocommerce_currency();
-			$this->fedex_currency			= ! empty($this->settings['fedex_currency']) ? $this->settings['fedex_currency'] : $this->wc_store_currency;
-			$this->fedex_conversion_rate	= ! empty($this->settings['fedex_conversion_rate']) ? (float) $this->settings['fedex_conversion_rate'] : 1;
-
-			$this->set_origin_country_state();
+		$this->api_key				= $this->get_option( 'api_key' );
+		$this->api_pass				= $this->get_option( 'api_pass' );
+		$this->production			= ( $bool = $this->get_option( 'production' ) ) && $bool == 'yes' ? true : false;
+		$this->debug				= ( $bool = $this->get_option( 'debug' ) ) && $bool == 'yes' ? true : false;
+		$this->delivery_time			= ( $bool = $this->get_option( 'delivery_time' ) ) && $bool == 'yes' ? true : false;
+		if( $this->delivery_time && empty(self::$wp_date_format) ) {
+			self::$wp_date_format = get_option('date_format');
 		}
+		$this->insure_contents			= ( $bool = $this->get_option( 'insure_contents' ) ) && $bool == 'yes' ? true : false;
+		$this->request_type			= $this->get_option( 'request_type', 'LIST' );
 
+		$this->packing_method			= $this->get_option( 'packing_method', 'per_item' );
+		$this->conversion_rate			= ! empty( $this->settings['conversion_rate'] ) ? $this->settings['conversion_rate'] : '';
+		$this->min_shipping_cost	= ! empty($this->settings['min_shipping_cost']) ? $this->settings['min_shipping_cost'] : null;
+		$this->boxes				= $this->get_option( 'boxes', array( ));
+		$this->custom_services			= $this->get_option( 'services', array( ));
+		$this->offer_rates			= $this->get_option( 'offer_rates', 'all' );
+		$this->convert_currency_to_base		= $this->get_option( 'convert_currency');		
+		$this->residential			= ( $bool = $this->get_option( 'residential' ) ) && $bool == 'yes' ? true : false;
+		$this->freight_enabled			= ( $bool = $this->get_option( 'freight_enabled' ) ) && $bool == 'yes' ? true : false;
+		$this->fedex_one_rate			= ( $bool = $this->get_option( 'fedex_one_rate' ) ) && $bool == 'yes' ? true : false;
+		$this->fedex_one_rate_package_ids = array(
+			'FEDEX_SMALL_BOX',
+			'FEDEX_MEDIUM_BOX',
+			'FEDEX_LARGE_BOX',
+			'FEDEX_EXTRA_LARGE_BOX',
+			'FEDEX_PAK',
+			'FEDEX_ENVELOPE',
+		);
+		
+		$this->delivery_time_details		= '';
+		$this->box_max_weight			= $this->get_option( 'box_max_weight' );
+		$this->weight_pack_process		= $this->get_option( 'weight_pack_process' );
+		
+		if($this->get_option( 'dimension_weight_unit' ) == 'LBS_IN'){
+			$this->dimension_unit		= 'in';
+			$this->weight_unit		= 'lbs';
+			$this->labelapi_dimension_unit	= 'IN';
+			$this->labelapi_weight_unit 	= 'LB';
+		}else{
+			$this->dimension_unit		= 'cm';
+			$this->weight_unit		= 'kg';
+			$this->labelapi_dimension_unit	= 'CM';
+			$this->labelapi_weight_unit 	= 'KG';
+			$this->default_boxes		= include( 'data-wf-box-sizes-cm.php' );
+		}
+		if ( $this->freight_enabled ) {
+			$this->freight_class			= $this->get_option( 'freight_class' );
+			$this->freight_number			= $this->get_option( 'freight_number', $this->account_number );
+			$this->freight_bill_street		= $this->get_option( 'freight_bill_street' );
+			$this->freight_billing_street_2		= $this->get_option( 'billing_street_2' );
+			$this->freight_billing_city		= $this->get_option( 'freight_billing_city' );
+			$this->freight_billing_state		= $this->get_option( 'freight_billing_state' );
+			$this->freight_billing_postcode		= $this->get_option( 'billing_postcode' );
+			$this->freight_billing_country		= $this->get_option( 'billing_country' );
+			$this->frt_shipper_street		= $this->get_option( 'frt_shipper_street' );
+			$this->freight_shipper_street_2		= $this->get_option( 'shipper_street_2' );
+			$this->freight_shipper_city		= $this->get_option( 'freight_shipper_city' );
+			$this->freight_shipper_residential	= ( $bool = $this->get_option( 'shipper_residential' ) ) && $bool == 'yes' ? true : false;
+			$this->freight_class			= str_replace( array( 'CLASS_', '.' ), array( '', '_' ), $this->freight_class );
+		}
+		$this->is_dry_ice_enabled 	= isset( $this->settings['dry_ice_enabled'] ) && $this->settings['dry_ice_enabled'] =='yes' ? true : false;
+		
+		$this->signature_option 	= isset ( $this->settings['signature_option'] ) ? $this->settings['signature_option'] : '';
+		$this->min_amount	  		= isset( $this->settings['min_amount'] ) ? $this->settings['min_amount'] : 0;
+		$this->customs_duties_payer	= isset ( $this->settings['customs_duties_payer'] ) ? $this->settings['customs_duties_payer'] : '';
+		$this->enable_speciality_box	= ( $bool = $this->get_option( 'enable_speciality_box' ) ) && $bool == 'yes' ? true : false;
+		$this->ship_time_adjustment = isset( $this->settings['ship_time_adjustment']) ? $this->settings['ship_time_adjustment'] : 1;
+		$this->wc_store_currency		= get_woocommerce_currency();
+		$this->fedex_currency			= ! empty($this->settings['fedex_currency']) ? $this->settings['fedex_currency'] : $this->wc_store_currency;
+		$this->fedex_conversion_rate	= ! empty($this->settings['fedex_conversion_rate']) ? (float) $this->settings['fedex_conversion_rate'] : 1;
+
+		$this->set_origin_country_state();
 
 		// Insure contents requires matching currency to country
 		switch ( $this->origin_country ) {
@@ -256,211 +244,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		add_action( 'woocommerce_checkout_update_order_review', array($this,'wf_fedex_update_checkout_fields'), 1, 1 );
 		// To save the fedex option selected on checkout page like liftgate_delivery, inside_delivery
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'custom_checkout_field_update_order_meta' ) );
-	}
-
-	public function get_general_settings(){
-		$current_cur = WC_Aelia_CurrencySwitcher::instance()->get_selected_currency();
-		//echo $current_cur.'<br/>';
-		$prefix = '';
-		$ship_from_address = 'ship_from_address';
-		$dry_ice_enabled = 'dry_ice_enabled';
-		$signature_option = 'signature_option';
-		$customs_duties_payer = 'customs_duties_payer';
-		$origin_country = 'origin_country';
-		$origin = 'origin';
-		$fedex_currency = ! empty($this->settings['fedex_currency']) ? $this->settings['fedex_currency'] : $this->wc_store_currency;
-		if( $current_cur == 'AUD' ){
-			$prefix = 'au_';
-			$ship_from_address = 'au_ship_from_address';
-			$dry_ice_enabled = 'au_dry_ice_enabled';
-			$signature_option = 'au_signature_option';
-			$customs_duties_payer = 'au_customs_duties_payer';
-			$fedex_currency = 'AUD';
-			$origin_country = 'au_origin_country';
-			$origin = 'au_origin';
-
-		} else if( $current_cur == 'GBP' ){
-			$prefix = 'uk_';
-			$ship_from_address = 'uk_ship_from_address';
-			$dry_ice_enabled = 'uk_dry_ice_enabled';
-			$signature_option = 'uk_signature_option';
-			$customs_duties_payer = 'uk_customs_duties_payer';
-			$fedex_currency = 'GBP';
-			$origin_country = 'uk_origin_country';
-			$origin = 'uk_origin';
-
-		}
-
-		$this->origin				= apply_filters( 'woocommerce_fedex_origin_postal_code', str_replace( ' ', '', strtoupper( $this->get_option( $origin ) ) ) );
-
-		$this->account_number			= $this->get_option( $prefix.'account_number' );
-		
-		$this->meter_number			= $this->get_option( $prefix.'meter_number' );
-		$this->smartpost_hub			= $this->get_option( $prefix.'smartpost_hub' );
-		$this->indicia				= $this->get_option( $prefix.'indicia' );
-	
-		$this->ship_from_address 		= isset($this->settings[$ship_from_address])? $this->settings[$ship_from_address] : 'origin_address';
-	
-		$this->api_key				= $this->get_option( $prefix.'api_key' );
-		$this->api_pass				= $this->get_option( $prefix.'api_pass' );
-		$this->production			= ( $bool = $this->get_option( $prefix.'production' ) ) && $bool == 'yes' ? true : false;
-		$this->debug				= ( $bool = $this->get_option( $prefix.'debug' ) ) && $bool == 'yes' ? true : false;
-		$this->delivery_time			= ( $bool = $this->get_option( 'delivery_time' ) ) && $bool == 'yes' ? true : false;
-		if( $this->delivery_time && empty(self::$wp_date_format) ) {
-			self::$wp_date_format = get_option('date_format');
-		}
-		$this->insure_contents			= ( $bool = $this->get_option( $prefix.'insure_contents' ) ) && $bool == 'yes' ? true : false;
-		$this->request_type			= $this->get_option( 'request_type', 'LIST' );
-
-		$this->packing_method			= $this->get_option( 'packing_method', 'per_item' );
-		$this->conversion_rate			= ! empty( $this->settings['conversion_rate'] ) ? $this->settings['conversion_rate'] : '';
-		$this->min_shipping_cost	= ! empty($this->settings['min_shipping_cost']) ? $this->settings['min_shipping_cost'] : null;
-		$this->boxes				= $this->get_option( 'boxes', array( ));
-		$this->custom_services			= $this->get_option( 'services', array( ));
-		$this->offer_rates			= $this->get_option( 'offer_rates', 'all' );
-		$this->convert_currency_to_base		= $this->get_option( 'convert_currency');		
-		$this->residential			= ( $bool = $this->get_option( $prefix.'residential' ) ) && $bool == 'yes' ? true : false;
-		$this->freight_enabled			= ( $bool = $this->get_option( 'freight_enabled' ) ) && $bool == 'yes' ? true : false;
-		$this->fedex_one_rate			= ( $bool = $this->get_option( 'fedex_one_rate' ) ) && $bool == 'yes' ? true : false;
-		$this->fedex_one_rate_package_ids = array(
-			'FEDEX_SMALL_BOX',
-			'FEDEX_MEDIUM_BOX',
-			'FEDEX_LARGE_BOX',
-			'FEDEX_EXTRA_LARGE_BOX',
-			'FEDEX_PAK',
-			'FEDEX_ENVELOPE',
-		);
-	
-		$this->delivery_time_details		= '';
-		$this->box_max_weight			= $this->get_option( 'box_max_weight' );
-		$this->weight_pack_process		= $this->get_option( 'weight_pack_process' );
-	
-		if( $this->get_option( $prefix.'dimension_weight_unit' ) == 'LBS_IN' ){
-			$this->dimension_unit		= 'in';
-			$this->weight_unit		= 'lbs';
-			$this->labelapi_dimension_unit	= 'IN';
-			$this->labelapi_weight_unit 	= 'LB';
-		} else {
-			$this->dimension_unit		= 'cm';
-			$this->weight_unit		= 'kg';
-			$this->labelapi_dimension_unit	= 'CM';
-			$this->labelapi_weight_unit 	= 'KG';
-			$this->default_boxes		= include( 'data-wf-box-sizes-cm.php' );
-		}
-		if ( $this->freight_enabled ) {
-			$this->freight_class			= $this->get_option( 'freight_class' );
-			$this->freight_number			= $this->get_option( 'freight_number', $this->account_number );
-			$this->freight_bill_street		= $this->get_option( 'freight_bill_street' );
-			$this->freight_billing_street_2		= $this->get_option( 'billing_street_2' );
-			$this->freight_billing_city		= $this->get_option( 'freight_billing_city' );
-			$this->freight_billing_state		= $this->get_option( 'freight_billing_state' );
-			$this->freight_billing_postcode		= $this->get_option( 'billing_postcode' );
-			$this->freight_billing_country		= $this->get_option( 'billing_country' );
-			$this->frt_shipper_street		= $this->get_option( $prefix.'frt_shipper_street' );
-			$this->freight_shipper_street_2		= $this->get_option( $prefix.'shipper_street_2' );
-			$this->freight_shipper_city		= $this->get_option( $prefix.'freight_shipper_city' );
-			$this->freight_shipper_residential	= ( $bool = $this->get_option( $prefix.'shipper_residential' ) ) && $bool == 'yes' ? true : false;
-			$this->freight_class			= str_replace( array( 'CLASS_', '.' ), array( '', '_' ), $this->freight_class );
-		}
-		$this->is_dry_ice_enabled 	= isset( $this->settings[$dry_ice_enabled] ) && $this->settings[$dry_ice_enabled] =='yes' ? true : false;
-	
-		$this->signature_option 	= isset ( $this->settings[$signature_option] ) ? $this->settings[$signature_option] : '';
-		$this->min_amount	  		= isset( $this->settings['min_amount'] ) ? $this->settings['min_amount'] : 0;
-		$this->customs_duties_payer	= isset ( $this->settings[$customs_duties_payer] ) ? $this->settings[$customs_duties_payer] : '';
-		$this->enable_speciality_box	= ( $bool = $this->get_option( 'enable_speciality_box' ) ) && $bool == 'yes' ? true : false;
-		$this->ship_time_adjustment = isset( $this->settings['ship_time_adjustment']) ? $this->settings['ship_time_adjustment'] : 1;
-		$this->wc_store_currency		= get_woocommerce_currency();
-		$this->fedex_currency			= $fedex_currency;
-		$this->fedex_conversion_rate	= ! empty($this->settings['fedex_conversion_rate']) ? (float) $this->settings['fedex_conversion_rate'] : 1;
-
-
-		//set origin country state
-		if( !is_admin() ){
-			$origin_country_state 		= isset( $this->settings[$origin_country] ) ? $this->settings[$origin_country] : '';
-			if ( strstr( $origin_country_state, ':' ) ) :
-				// WF: Following strict php standards.
-				$origin_country_state_array			= explode(':',$origin_country_state);
-				$origin_country					= current($origin_country_state_array);
-				$origin_country_state_array			= explode(':',$origin_country_state);
-				$origin_state					= end($origin_country_state_array);
-			else :
-				$origin_country					= $origin_country_state;
-				$origin_state					= '';
-				$this->settings[ 'freight_shipper_state' ]	= '';
-			endif;
-
-			$this->origin_country  	= apply_filters( 'woocommerce_fedex_origin_country_code', $origin_country );
-			$this->origin_state 	= !empty($origin_state) ? $origin_state : ( isset($this->settings[ 'freight_shipper_state' ]) ? $this->settings[ 'freight_shipper_state' ] : '' );
-			if( $_REQUEST['dev_test'] == true ){
-				echo 'not admin'.'<br/>';
-				echo $this->origin_country.'<br/>';
-			}	
-		} else {
-			$origin_country_state 		= isset( $this->settings['origin_country'] ) ? $this->settings['origin_country'] : '';
-			if ( strstr( $origin_country_state, ':' ) ) :
-				// WF: Following strict php standards.
-				$origin_country_state_array			= explode(':',$origin_country_state);
-				$origin_country					= current($origin_country_state_array);
-				$origin_country_state_array			= explode(':',$origin_country_state);
-				$origin_state					= end($origin_country_state_array);
-			else :
-				$origin_country					= $origin_country_state;
-				$origin_state					= '';
-				$this->settings[ 'freight_shipper_state' ]	= '';
-			endif;
-
-			$this->origin_country  	= apply_filters( 'woocommerce_fedex_origin_country_code', $origin_country );
-			$this->origin_state 	= !empty($origin_state) ? $origin_state : ( isset($this->settings[ 'freight_shipper_state' ]) ? $this->settings[ 'freight_shipper_state' ] : '' );
-
-			$uk_origin_country_state 		= isset( $this->settings['uk_origin_country'] ) ? $this->settings['uk_origin_country'] : '';
-			if ( strstr( $uk_origin_country_state, ':' ) ) :
-				// WF: Following strict php standards.
-				$uk_origin_country_state_array			= explode(':',$uk_origin_country_state);
-				$uk_origin_country					= current($uk_origin_country_state_array);
-				$uk_origin_country_state_array			= explode(':',$uk_origin_country_state);
-				$uk_origin_state					= end($uk_origin_country_state_array);
-			else :
-				$uk_origin_country					= $uk_origin_country_state;
-				$uk_origin_state					= '';
-				$this->settings[ 'freight_shipper_state' ]	= '';
-			endif;
-
-			$this->uk_origin_country  	= apply_filters( 'woocommerce_uk_fedex_origin_country_code', $uk_origin_country );
-			$this->uk_origin_state 	= !empty($uk_origin_state) ? $uk_origin_state : ( isset($this->settings[ 'freight_shipper_state' ]) ? $this->settings[ 'freight_shipper_state' ] : '' );
-
-			$au_origin_country_state 		= isset( $this->settings['au_origin_country'] ) ? $this->settings['au_origin_country'] : '';
-			if ( strstr( $au_origin_country_state, ':' ) ) :
-				// WF: Following strict php standards.
-				$au_origin_country_state_array			= explode(':',$au_origin_country_state);
-				$au_origin_country					= current($au_origin_country_state_array);
-				$au_origin_country_state_array			= explode(':',$au_origin_country_state);
-				$au_origin_state					= end($au_origin_country_state_array);
-			else :
-				$au_origin_country					= $au_origin_country_state;
-				$au_origin_state					= '';
-				$this->settings[ 'freight_shipper_state' ]	= '';
-			endif;
-
-			$this->au_origin_country  	= apply_filters( 'woocommerce_au_fedex_origin_country_code', $au_origin_country );
-			$this->au_origin_state 	= !empty($au_origin_state) ? $au_origin_state : ( isset($this->settings[ 'freight_shipper_state' ]) ? $this->settings[ 'freight_shipper_state' ] : '' );
-		}
-
-		if( $_REQUEST['dev_test'] == true ){
-			echo $this->settings['origin_country'].'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			echo $this->origin.'<br/>';
-			
-			echo '<pre>'; print_r( $this->settings ); echo '</pre>';
-		}
 	}
 
 	/**
@@ -688,42 +471,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 		<?php
 		return ob_get_clean();
 	}
-
-	public function generate_uk_single_select_country_html() {
-		global $woocommerce;
-		ob_start();
-		?>
-		<tr valign="top" class="fedex_general_tab">
-			<th scope="row" class="titledesc">
-				<label for="origin_country"><?php _e( 'Origin Country and State', 'wf-shipping-fedex' ); ?></label>
-			</th>
-			<td class="forminp">
-				<select name="woocommerce_uk_origin_country_state" id="woocommerce_uk_origin_country_state" style="width: 250px;" data-placeholder="<?php _e('Choose a country&hellip;', 'woocommerce'); ?>" title="Country" class="chosen_select">
-					<?php echo $woocommerce->countries->country_dropdown_options( $this->uk_origin_country, $this->uk_origin_state ? $this->uk_origin_state : '*' ); ?>
-				</select>
-			</td>
-		</tr>
-		<?php
-		return ob_get_clean();
-	}
-
-	public function generate_au_single_select_country_html() {
-		global $woocommerce;
-		ob_start();
-		?>
-		<tr valign="top" class="fedex_general_tab">
-			<th scope="row" class="titledesc">
-				<label for="origin_country"><?php _e( 'Origin Country and State', 'wf-shipping-fedex' ); ?></label>
-			</th>
-			<td class="forminp">
-				<select name="woocommerce_au_origin_country_state" id="woocommerce_au_origin_country_state" style="width: 250px;" data-placeholder="<?php _e('Choose a country&hellip;', 'woocommerce'); ?>" title="Country" class="chosen_select">
-					<?php echo $woocommerce->countries->country_dropdown_options( $this->au_origin_country, $this->au_origin_state ? $this->au_origin_state : '*' ); ?>
-				</select>
-			</td>
-		</tr>
-		<?php
-		return ob_get_clean();
-	}
 	
 	public function generate_settings_tabs_html()
 	{
@@ -782,30 +529,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 				<td style="vertical-align: top;padding-top: 0px;">
 					<input type="button" value=" Validate Credentials" id="xa_fedex_validate_credentials" class="button button-secondary" name="xa_fedex_validate_credentials" >
 					<p class="fedex-validation-result"></p>
-				</td>
-			</tr><?php
-		return ob_get_clean();
-	}
-
-	public function generate_uk_validate_button_html(){
-		ob_start();?>
-			<tr style="padding-top: 0px;" class="fedex_general_tab">
-				<td></td>
-				<td style="vertical-align: top;padding-top: 0px;">
-					<input type="button" value=" Validate Credentials" id="xa_fedex_uk_validate_credentials" class="button button-secondary" name="xa_fedex_uk_validate_credentials" data-country="uk">
-					<p class="fedex-validation-result-uk"></p>
-				</td>
-			</tr><?php
-		return ob_get_clean();
-	}
-
-	public function generate_au_validate_button_html(){
-		ob_start();?>
-			<tr style="padding-top: 0px;" class="fedex_general_tab">
-				<td></td>
-				<td style="vertical-align: top;padding-top: 0px;">
-					<input type="button" value=" Validate Credentials" id="xa_fedex_au_validate_credentials" class="button button-secondary" name="xa_fedex_au_validate_credentials" data-country="au">
-					<p class="fedex-validation-result-au"></p>
 				</td>
 			</tr><?php
 		return ob_get_clean();
@@ -882,20 +605,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 
 		if ( isset( $_POST['woocommerce_origin_country_state'] ) )
 			return $_POST['woocommerce_origin_country_state'];
-		return '';
-	}
-
-	public function validate_uk_single_select_country_field( $key ) {
-		
-		if ( isset( $_POST['woocommerce_uk_origin_country_state'] ) )
-			return $_POST['woocommerce_uk_origin_country_state'];
-		return '';
-	}
-
-	public function validate_au_single_select_country_field( $key ) {
-
-		if ( isset( $_POST['woocommerce_au_origin_country_state'] ) )
-			return $_POST['woocommerce_au_origin_country_state'];
 		return '';
 	}
 	
@@ -1537,7 +1246,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	}
 
 	public function get_fedex_requests( $fedex_packages, $package, $request_type = '' ) {
-		
 		$requests = array();
 		$this->packaging_type = empty($fedex_packages['package_id']) ? 'YOUR_PACKAGING' : $fedex_packages['package_id'];
 		$country_obect	= new WC_Countries();
@@ -1889,7 +1597,6 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 	}
 
 	public function calculate_shipping( $package = array() ) {
-		
 		// Clear rates
 		$this->found_rates = array();
 		// Debugging
@@ -1900,6 +1607,7 @@ class wf_fedex_woocommerce_shipping_method extends WC_Shipping_Method {
 			$this->residential_address_validation( $package );
 		}
 		
+
 		$packages = apply_filters('wf_filter_package_address', array($package) , $this->ship_from_address);
 		
 		// Get requests

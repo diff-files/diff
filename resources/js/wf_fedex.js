@@ -66,8 +66,6 @@ jQuery(function($){
 		if( $tab == 'general' ){
 			xa_fedex_duties_payer_options();
 			xa_fedex_payment_type_options();
-			xa_fedex_uk_payment_type_options();
-			xa_fedex_au_payment_type_options();
 		}
 		if( $tab == 'pickup' ){
 			wf_fedex_load_pickup_options();
@@ -115,14 +113,6 @@ jQuery(function($){
 
 	jQuery('#woocommerce_wf_fedex_woocommerce_shipping_charges_payment_type').change(function(){
 		xa_fedex_payment_type_options();
-	});
-
-	jQuery('#woocommerce_wf_fedex_woocommerce_shipping_uk_charges_payment_type').change(function(){
-		xa_fedex_uk_payment_type_options();
-	});
-
-	jQuery('#woocommerce_wf_fedex_woocommerce_shipping_au_charges_payment_type').change(function(){
-		xa_fedex_au_payment_type_options();
 	});
 
 
@@ -213,24 +203,6 @@ function xa_fedex_payment_type_options(){
 	}
 }
 
-function xa_fedex_uk_payment_type_options(){
-	me = jQuery('#woocommerce_wf_fedex_woocommerce_shipping_uk_charges_payment_type');
-	if( me.val() =='THIRD_PARTY' ){
-		jQuery('.uk_thirdparty_grp').closest('tr').show();
-	}else{
-		jQuery('.uk_thirdparty_grp').closest('tr').hide();
-	}
-}
-
-function xa_fedex_au_payment_type_options(){
-	me = jQuery('#woocommerce_wf_fedex_woocommerce_shipping_au_charges_payment_type');
-	if( me.val() =='THIRD_PARTY' ){
-		jQuery('.au_thirdparty_grp').closest('tr').show();
-	}else{
-		jQuery('.au_thirdparty_grp').closest('tr').hide();
-	}
-}
-
 function xa_fedex_duties_payer_options(){
 	me = jQuery('#woocommerce_wf_fedex_woocommerce_shipping_customs_duties_payer');
 	if( me.val() =='THIRD_PARTY' ){
@@ -308,11 +280,9 @@ function wf_fedex_automatic_label_generation(){
 	}
 }
 jQuery( document ).ready( function( $ ) {
-	$('#xa_fedex_validate_credentials, #xa_fedex_uk_validate_credentials, #xa_fedex_au_validate_credentials').on('click', function( event ){
+	$('#xa_fedex_validate_credentials').on('click', function( event ){
 		jQuery( ".fedex-validation-result").html('<span style="float:left" class="spinner is-active"&nbsp;</span>' );
 		event.preventDefault();
-		var country = $(this).data('country');
-		console.log(country);
 		var data = {
 			'action'		: 'xa_fedex_validate_credential',
 			'production'	: $('#woocommerce_wf_fedex_woocommerce_shipping_production').is(":checked") ? true : false,
@@ -323,38 +293,13 @@ jQuery( document ).ready( function( $ ) {
 			'origin'		: $('#woocommerce_wf_fedex_woocommerce_shipping_origin').val(),
 			'origin_country': $('#woocommerce_origin_country_state').val(),
 		};
-		if( country != '' ){
-			if( country == 'uk' ){
-				var data = {
-					'action'		: 'xa_fedex_validate_credential',
-					'production'	: $('#woocommerce_wf_fedex_woocommerce_shipping_uk_production').is(":checked") ? true : false,
-					'account_number': $('#woocommerce_wf_fedex_woocommerce_shipping_uk_account_number').val(),
-					'meter_number'	: $('#woocommerce_wf_fedex_woocommerce_shipping_uk_meter_number').val(),
-					'api_key'		: $('#woocommerce_wf_fedex_woocommerce_shipping_uk_api_key').val(),
-					'api_pass'		: $('#woocommerce_wf_fedex_woocommerce_shipping_uk_api_pass').val(),
-					'origin'		: $('#woocommerce_wf_fedex_woocommerce_shipping_uk_origin').val(),
-					'origin_country': $('#woocommerce_uk_origin_country_state').val(),
-				};
-			} else if( country == 'au' ){
-				var data = {
-					'action'		: 'xa_fedex_validate_credential',
-					'production'	: $('#woocommerce_wf_fedex_woocommerce_shipping_au_production').is(":checked") ? true : false,
-					'account_number': $('#woocommerce_wf_fedex_woocommerce_shipping_au_account_number').val(),
-					'meter_number'	: $('#woocommerce_wf_fedex_woocommerce_shipping_au_meter_number').val(),
-					'api_key'		: $('#woocommerce_wf_fedex_woocommerce_shipping_au_api_key').val(),
-					'api_pass'		: $('#woocommerce_wf_fedex_woocommerce_shipping_au_api_pass').val(),
-					'origin'		: $('#woocommerce_wf_fedex_woocommerce_shipping_au_origin').val(),
-					'origin_country': $('#woocommerce_au_origin_country_state').val(),
-				};
-			}
-		}
 
 		jQuery.post(ajaxurl, data, function(response) {
 			response = JSON.parse(response);
 			if( response.success=='yes' ){
-				$(".fedex-validation-result-"+country).html('<span style="color: green;">'+response.message+'</span>')
+				$(".fedex-validation-result").html('<span style="color: green;">'+response.message+'</span>')
 			}else{
-				$(".fedex-validation-result-"+country).html('<span style="color: red">'+response.message+'</span>')
+				$(".fedex-validation-result").html('<span style="color: red">'+response.message+'</span>')
 			}
 		});
 	});
